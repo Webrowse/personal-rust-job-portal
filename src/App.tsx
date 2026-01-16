@@ -1,37 +1,38 @@
 import { useState, useMemo, useEffect } from 'react';
 import {
-  Header,
   AddSourceForm,
   SourceCard,
   RssFeedCard,
   SearchFilter,
   BulkActions,
+  AdminLogin,
 } from './components';
-import { useJobSources } from './hooks';
-import type { JobSource } from './types';
-import { Rss, Link2, Inbox, RefreshCw } from 'lucide-react';
+import { useSupabase } from './hooks';
+import type { JobSource, RssFeed } from './types';
+import { Rss, Link2, Inbox, RefreshCw, Loader2 } from 'lucide-react';
 
 function App() {
   const {
     sources,
-    feeds,
-    darkMode,
+    loading,
+    error,
+    user,
+    isAdmin,
+    signIn,
+    signOut,
     addSource,
     updateSource,
     deleteSource,
-    markAsOpened,
-    toggleFavorite,
-    setFeed,
-    toggleDarkMode,
-    exportData,
-    importData,
-    refreshAllMetadata,
-  } = useJobSources();
+    refreshSources,
+  } = useSupabase();
 
+  const [feeds, setFeeds] = useState<Record<string, RssFeed>>({});
+  const [darkMode, setDarkMode] = useState(() => {
+    return localStorage.getItem('darkMode') === 'true';
+  });
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedTags, setSelectedTags] = useState<string[]>([]);
   const [showFavoritesOnly, setShowFavoritesOnly] = useState(false);
-  const [isRefreshing, setIsRefreshing] = useState(false);
   const [rssRefreshTrigger, setRssRefreshTrigger] = useState(0);
   const [isRefreshingRss, setIsRefreshingRss] = useState(false);
 
@@ -39,10 +40,18 @@ function App() {
   useEffect(() => {
     if (darkMode) {
       document.documentElement.classList.add('dark');
+      localStorage.setItem('darkMode', 'true');
     } else {
       document.documentElement.classList.remove('dark');
+      localStorage.setItem('darkMode', 'false');
     }
   }, [darkMode]);
+
+  const toggleDarkMode = () => setDarkMode((prev) => !prev);
+
+  const setFeed = (sourceId: string, feed: RssFeed) => {
+    setFeeds((prev) => ({ ...prev, [sourceId]: feed }));
+  };
 
   // Get all unique tags
   const allTags = useMemo(() => {
@@ -112,23 +121,12 @@ function App() {
   const handleOpenSources = (sourcesToOpen: JobSource[]) => {
     sourcesToOpen.forEach((source) => {
       window.open(source.url, '_blank');
-      markAsOpened(source.id);
     });
-  };
-
-  const handleRefreshAll = async () => {
-    setIsRefreshing(true);
-    try {
-      await refreshAllMetadata();
-    } finally {
-      setIsRefreshing(false);
-    }
   };
 
   const handleRefreshAllRss = () => {
     setIsRefreshingRss(true);
     setRssRefreshTrigger((prev) => prev + 1);
-    // Reset the refreshing state after a delay
     setTimeout(() => setIsRefreshingRss(false), 2000);
   };
 
@@ -143,21 +141,84 @@ function App() {
     return () => clearInterval(interval);
   }, [rssSources.length]);
 
+  const markAsOpened = (id: string) => {
+    if (isAdmin) {
+      updateSource(id, { lastOpened: new Date().toISOString() });
+    }
+  };
+
+  const toggleFavorite = (id: string) => {
+    if (isAdmin) {
+      const source = sources.find((s) => s.id === id);
+      if (source) {
+        updateSource(id, { isFavorite: !source.isFavorite });
+      }
+    }
+  };
+
+  // Show loading state
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex items-center justify-center">
+        <div className="flex items-center gap-3 text-gray-500">
+          <Loader2 className="w-6 h-6 animate-spin" />
+          <span>Loading sources...</span>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
-      <Header
-        darkMode={darkMode}
-        onToggleDarkMode={toggleDarkMode}
-        onExport={exportData}
-        onImport={importData}
-        onRefreshAll={handleRefreshAll}
-        isRefreshing={isRefreshing}
-      />
+      {/* Header */}
+      <header className="bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <h1 className="text-xl font-bold text-gray-900 dark:text-white">
+                Job Source Manager
+              </h1>
+              {error && (
+                <span className="text-sm text-red-500">{error}</span>
+              )}
+            </div>
+            <div className="flex items-center gap-4">
+              <AdminLogin
+                user={user}
+                isAdmin={isAdmin}
+                onSignIn={signIn}
+                onSignOut={signOut}
+              />
+              <button
+                onClick={toggleDarkMode}
+                className="p-2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors"
+                title={darkMode ? 'Light mode' : 'Dark mode'}
+              >
+                {darkMode ? '☀️' : '🌙'}
+              </button>
+              <button
+                onClick={refreshSources}
+                className="p-2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors"
+                title="Refresh sources from database"
+              >
+                <RefreshCw className="w-4 h-4" />
+              </button>
+            </div>
+          </div>
+        </div>
+      </header>
 
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
         <div className="space-y-6">
-          {/* Add Source Form */}
-          <AddSourceForm onAdd={addSource} />
+          {/* Add Source Form - Only show for admin */}
+          {isAdmin && <AddSourceForm onAdd={addSource} />}
+
+          {/* Non-admin message */}
+          {!isAdmin && !user && (
+            <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-4 text-sm text-blue-700 dark:text-blue-300">
+              You're viewing shared job sources. Login as admin to add or edit sources.
+            </div>
+          )}
 
           {/* Search and Filter */}
           {sources.length > 0 && (
@@ -188,16 +249,10 @@ function App() {
                 No job sources yet
               </h2>
               <p className="text-gray-500 dark:text-gray-400 mb-4">
-                Add your first Rust job source to start tracking
+                {isAdmin
+                  ? 'Add your first job source to start tracking'
+                  : 'No sources have been added yet. Check back later!'}
               </p>
-              <div className="text-sm text-gray-400 dark:text-gray-500">
-                <p>Try adding these popular sources:</p>
-                <ul className="mt-2 space-y-1">
-                  <li>jobs.rust-lang.org</li>
-                  <li>rustjobs.dev</li>
-                  <li>www.indeed.com/q-Rust-Developer-Remote-jobs.html</li>
-                </ul>
-              </div>
             </div>
           )}
 
@@ -227,8 +282,8 @@ function App() {
                   <SourceCard
                     key={source.id}
                     source={source}
-                    onUpdate={updateSource}
-                    onDelete={deleteSource}
+                    onUpdate={isAdmin ? updateSource : () => {}}
+                    onDelete={isAdmin ? deleteSource : () => {}}
                     onOpen={markAsOpened}
                     onToggleFavorite={toggleFavorite}
                   />
@@ -265,7 +320,7 @@ function App() {
                     source={source}
                     feed={feeds[source.id]}
                     onFeedUpdate={setFeed}
-                    onDelete={deleteSource}
+                    onDelete={isAdmin ? deleteSource : () => {}}
                     autoRefreshTrigger={rssRefreshTrigger}
                   />
                 ))}
@@ -278,7 +333,7 @@ function App() {
       {/* Footer */}
       <footer className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 text-center">
         <p className="text-sm text-gray-400 dark:text-gray-500">
-          Personal Rust Job Source Manager
+          Job Source Manager
         </p>
       </footer>
     </div>

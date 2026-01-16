@@ -5,3 +5,4 @@ export { RssFeedCard } from './RssFeedCard';
 export { SearchFilter } from './SearchFilter';
 export { BulkActions } from './BulkActions';
 export { TagBadge } from './TagBadge';
+export { AdminLogin } from './AdminLogin';
