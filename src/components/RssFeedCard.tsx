@@ -10,9 +10,10 @@ interface RssFeedCardProps {
   onFeedUpdate: (sourceId: string, feed: RssFeed) => void;
   onDelete: (id: string) => void;
   autoRefreshTrigger?: number;
+  isAdmin?: boolean;
 }
 
-export function RssFeedCard({ source, feed, onFeedUpdate, onDelete, autoRefreshTrigger }: RssFeedCardProps) {
+export function RssFeedCard({ source, feed, onFeedUpdate, onDelete, autoRefreshTrigger, isAdmin = false }: RssFeedCardProps) {
   const { parseRssFeed, loading } = useRssFeed();
   const [isExpanded, setIsExpanded] = useState(true);
 
@@ -99,18 +100,20 @@ export function RssFeedCard({ source, feed, onFeedUpdate, onDelete, autoRefreshT
           >
             <ExternalLink className="w-4 h-4" />
           </a>
-          <button
-            onClick={(e) => {
-              e.stopPropagation();
-              if (confirm('Delete this RSS feed?')) {
-                onDelete(source.id);
-              }
-            }}
-            className="p-2 text-gray-400 hover:text-red-500 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors"
-            title="Delete feed"
-          >
-            <Trash2 className="w-4 h-4" />
-          </button>
+          {isAdmin && (
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                if (confirm('Delete this RSS feed?')) {
+                  onDelete(source.id);
+                }
+              }}
+              className="p-2 text-gray-400 hover:text-red-500 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors"
+              title="Delete feed"
+            >
+              <Trash2 className="w-4 h-4" />
+            </button>
+          )}
         </div>
       </div>
 

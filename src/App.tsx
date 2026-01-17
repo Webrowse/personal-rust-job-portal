@@ -282,10 +282,11 @@ function App() {
                   <SourceCard
                     key={source.id}
                     source={source}
-                    onUpdate={isAdmin ? updateSource : () => {}}
-                    onDelete={isAdmin ? deleteSource : () => {}}
+                    onUpdate={updateSource}
+                    onDelete={deleteSource}
                     onOpen={markAsOpened}
                     onToggleFavorite={toggleFavorite}
+                    isAdmin={isAdmin}
                   />
                 ))}
               </div>
@@ -320,8 +321,9 @@ function App() {
                     source={source}
                     feed={feeds[source.id]}
                     onFeedUpdate={setFeed}
-                    onDelete={isAdmin ? deleteSource : () => {}}
+                    onDelete={deleteSource}
                     autoRefreshTrigger={rssRefreshTrigger}
+                    isAdmin={isAdmin}
                   />
                 ))}
               </div>
