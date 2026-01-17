@@ -1,16 +1,17 @@
 import { useState } from 'react';
-import { LogIn, LogOut, Mail, Loader2 } from 'lucide-react';
+import { LogIn, LogOut, Mail, Lock, Loader2 } from 'lucide-react';
 import type { User } from '@supabase/supabase-js';
 
 interface AdminLoginProps {
   user: User | null;
   isAdmin: boolean;
-  onSignIn: (email: string) => Promise<{ error: string | null }>;
+  onSignIn: (email: string, password: string) => Promise<{ error: string | null }>;
   onSignOut: () => Promise<void>;
 }
 
 export function AdminLogin({ user, isAdmin, onSignIn, onSignOut }: AdminLoginProps) {
   const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState('');
   const [showForm, setShowForm] = useState(false);
@@ -20,13 +21,14 @@ export function AdminLogin({ user, isAdmin, onSignIn, onSignOut }: AdminLoginPro
     setLoading(true);
     setMessage('');
 
-    const { error } = await onSignIn(email);
+    const { error } = await onSignIn(email, password);
 
     if (error) {
       setMessage(error);
     } else {
-      setMessage('Check your email for the login link!');
       setEmail('');
+      setPassword('');
+      setShowForm(false);
     }
 
     setLoading(false);
@@ -62,16 +64,27 @@ export function AdminLogin({ user, isAdmin, onSignIn, onSignOut }: AdminLoginPro
   }
 
   return (
-    <form onSubmit={handleSubmit} className="flex items-center gap-2">
+    <form onSubmit={handleSubmit} className="flex items-center gap-2 flex-wrap">
       <div className="relative">
         <Mail className="absolute left-2 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
         <input
           type="email"
           value={email}
           onChange={(e) => setEmail(e.target.value)}
-          placeholder="Admin email"
+          placeholder="Email"
           required
-          className="pl-8 pr-3 py-1.5 text-sm bg-gray-100 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-rust w-48"
+          className="pl-8 pr-3 py-1.5 text-sm bg-gray-100 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-rust w-40"
+        />
+      </div>
+      <div className="relative">
+        <Lock className="absolute left-2 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+        <input
+          type="password"
+          value={password}
+          onChange={(e) => setPassword(e.target.value)}
+          placeholder="Password"
+          required
+          className="pl-8 pr-3 py-1.5 text-sm bg-gray-100 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-rust w-32"
         />
       </div>
       <button
@@ -79,7 +92,7 @@ export function AdminLogin({ user, isAdmin, onSignIn, onSignOut }: AdminLoginPro
         disabled={loading}
         className="px-3 py-1.5 text-sm bg-rust text-white rounded-lg hover:bg-rust-dark disabled:opacity-50 transition-colors"
       >
-        {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Send Link'}
+        {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Login'}
       </button>
       <button
         type="button"
@@ -92,7 +105,7 @@ export function AdminLogin({ user, isAdmin, onSignIn, onSignOut }: AdminLoginPro
         Cancel
       </button>
       {message && (
-        <span className="text-xs text-gray-500 dark:text-gray-400">{message}</span>
+        <span className="text-xs text-red-500">{message}</span>
       )}
     </form>
   );

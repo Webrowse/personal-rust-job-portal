@@ -9,9 +9,9 @@ interface UseSupabaseReturn {
   error: string | null;
   user: User | null;
   isAdmin: boolean;
-  signIn: (email: string) => Promise<{ error: string | null }>;
+  signIn: (email: string, password: string) => Promise<{ error: string | null }>;
   signOut: () => Promise<void>;
-  addSource: (url: string, isRssFeed: boolean) => Promise<void>;
+  addSource: (url: string, isRssFeed?: boolean) => Promise<void>;
   updateSource: (id: string, updates: Partial<JobSource>) => Promise<void>;
   deleteSource: (id: string) => Promise<void>;
   refreshSources: () => Promise<void>;
@@ -64,6 +64,7 @@ export function useSupabase(): UseSupabaseReturn {
         isFavorite: row.is_favorite,
         lastOpened: row.last_opened,
         createdAt: row.created_at,
+        updatedAt: row.updated_at || row.created_at,
       }));
       setSources(transformed);
     }
@@ -76,13 +77,11 @@ export function useSupabase(): UseSupabaseReturn {
     refreshSources();
   }, [refreshSources]);
 
-  // Sign in with magic link
-  const signIn = useCallback(async (email: string) => {
-    const { error } = await supabase.auth.signInWithOtp({
+  // Sign in with email and password
+  const signIn = useCallback(async (email: string, password: string) => {
+    const { error } = await supabase.auth.signInWithPassword({
       email,
-      options: {
-        emailRedirectTo: window.location.origin,
-      },
+      password,
     });
 
     if (error) {

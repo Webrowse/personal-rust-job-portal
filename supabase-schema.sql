@@ -1,4 +1,6 @@
 -- Run this in your Supabase SQL Editor (Dashboard > SQL Editor > New Query)
+-- First, drop existing table if it exists
+DROP TABLE IF EXISTS job_sources;
 
 -- Create job_sources table
 CREATE TABLE job_sources (
@@ -18,33 +20,32 @@ CREATE TABLE job_sources (
 -- Enable Row Level Security
 ALTER TABLE job_sources ENABLE ROW LEVEL SECURITY;
 
--- Policy: Anyone can read
+-- Policy: Anyone can read (including anonymous users)
 CREATE POLICY "Anyone can read job_sources"
   ON job_sources
   FOR SELECT
-  TO anon, authenticated
   USING (true);
 
--- Policy: Only authenticated admin can insert
-CREATE POLICY "Admin can insert job_sources"
+-- Policy: Authenticated users can insert
+CREATE POLICY "Authenticated users can insert"
   ON job_sources
   FOR INSERT
   TO authenticated
-  WITH CHECK (auth.jwt() ->> 'email' = current_setting('app.admin_email', true));
+  WITH CHECK (true);
 
--- Policy: Only authenticated admin can update
-CREATE POLICY "Admin can update job_sources"
+-- Policy: Authenticated users can update
+CREATE POLICY "Authenticated users can update"
   ON job_sources
   FOR UPDATE
   TO authenticated
-  USING (auth.jwt() ->> 'email' = current_setting('app.admin_email', true));
+  USING (true);
 
--- Policy: Only authenticated admin can delete
-CREATE POLICY "Admin can delete job_sources"
+-- Policy: Authenticated users can delete
+CREATE POLICY "Authenticated users can delete"
   ON job_sources
   FOR DELETE
   TO authenticated
-  USING (auth.jwt() ->> 'email' = current_setting('app.admin_email', true));
+  USING (true);
 
 -- Create updated_at trigger
 CREATE OR REPLACE FUNCTION update_updated_at()
